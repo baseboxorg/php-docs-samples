@@ -48,18 +48,19 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
     /* @var $keys array */
     protected static $keys = [];
 
+    /* @var $eventuallyConsistentRetryCount int */
+    protected static $eventuallyConsistentRetryCount;
+
     /* @var $datastore DatastoreClient */
     protected static $datastore;
 
     public static function setUpBeforeClass()
     {
         $path = getenv('GOOGLE_APPLICATION_CREDENTIALS');
+        self::$eventuallyConsistentRetryCount =
+            getenv('DATASTORE_EVENTUALLY_CONSISTENT_RETRY_COUNT') ?: 3;
         self::$hasCredentials = $path && file_exists($path) &&
             filesize($path) > 0;
-        self::$datastore = new DatastoreClient(
-            array('namespaceId' => generateRandomString())
-        );
-        self::$keys[] = self::$datastore->key('Task', 'sampleTask');
     }
 
     public function setUp()
@@ -70,6 +71,10 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 'No application credentials were found, also not using the '
                 . 'datastore emulator');
         }
+        //
+        self::$datastore = new DatastoreClient(
+            array('namespaceId' => generateRandomString())
+        );
         self::$keys = [];
     }
 
@@ -301,12 +306,10 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
         $key = self::$datastore->key('Task', generateRandomString());
         self::$keys[] = $key;
         $task = properties(self::$datastore, $key);
-        $now = new \DateTime();
         self::$datastore->upsert($task);
         $task = self::$datastore->lookup($key);
         $this->assertEquals('Personal', $task['category']);
         $this->assertInstanceOf(\DateTimeInterface::class, $task['created']);
-        $this->assertGreaterThanOrEqual($now, $task['created']);
         $this->assertGreaterThanOrEqual($task['created'], new \DateTime());
         $this->assertEquals(false, $task['done']);
         $this->assertEquals(10.0, $task['percent_complete']);
@@ -353,7 +356,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
             // tags = 'programming', collaborators = 'alice'
             // tags = 'programming', collaborators = 'bob'
             self::assertEquals(4, $num);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testBasicQuery()
@@ -384,7 +387,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 self::assertEquals(2, $num);
                 $this->assertTrue($entities[0]->key()->path() == $key2->path());
                 $this->assertTrue($entities[1]->key()->path() == $key1->path());
-            });
+            }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testRunQuery()
@@ -415,7 +418,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 self::assertEquals(2, $num);
                 $this->assertTrue($entities[0]->key()->path() == $key2->path());
                 $this->assertTrue($entities[1]->key()->path() == $key1->path());
-            });
+            }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testPropertyFilter()
@@ -443,7 +446,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 }
                 self::assertEquals(1, $num);
                 $this->assertTrue($entities[0]->key()->path() == $key1->path());
-            });
+            }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testCompositeFilter()
@@ -473,7 +476,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 }
                 self::assertEquals(1, $num);
                 $this->assertTrue($entities[0]->key()->path() == $key1->path());
-            });
+            }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testKeyFilter()
@@ -499,7 +502,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 }
                 self::assertEquals(1, $num);
                 $this->assertTrue($entities[0]->key()->path() == $key1->path());
-            });
+            }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testAscendingSort()
@@ -528,7 +531,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 self::assertEquals(2, $num);
                 $this->assertTrue($entities[0]->key()->path() == $key2->path());
                 $this->assertTrue($entities[1]->key()->path() == $key1->path());
-            });
+            }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testDescendingSort()
@@ -557,7 +560,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 self::assertEquals(2, $num);
                 $this->assertTrue($entities[0]->key()->path() == $key2->path());
                 $this->assertTrue($entities[1]->key()->path() == $key1->path());
-            });
+            }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testMultiSort()
@@ -598,7 +601,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 $this->assertEquals(4, $entities[2]['priority']);
                 $this->assertTrue($entities[0]['created'] > $entities[1]['created']);
                 $this->assertTrue($entities[1]['created'] < $entities[2]['created']);
-            });
+            }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testAncestorQuery()
@@ -646,7 +649,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 }
                 self::assertEquals(1, $num);
                 $this->assertTrue($entities[0]->key()->path() == $key1->path());
-            });
+            }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testKeysOnlyQuery()
@@ -669,7 +672,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 break;
             }
             self::assertTrue($found);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testProjectionQuery()
@@ -693,7 +696,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 $found = true;
             }
             self::assertTrue($found);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testRunProjectionQuery()
@@ -711,7 +714,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
             $this->assertEquals(2, count($result));
             $this->assertEquals([4], $result[0]);
             $this->assertEquals([50], $result[1]);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testDistinctOn()
@@ -741,7 +744,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 $num += 1;
             }
             self::assertEquals(1, $num);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testArrayValueFilters()
@@ -778,7 +781,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 $num += 1;
             }
             self::assertEquals(1, $num);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testLimit()
@@ -801,7 +804,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 $num += 1;
             }
             self::assertEquals(5, $num);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testCursorPaging()
@@ -818,7 +821,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
             $this->assertEquals(3, count($res['entities']));
             $res = cursor_paging(self::$datastore, 3, $res['nextPageCursor']);
             $this->assertEquals(2, count($res['entities']));
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testInequalityRange()
@@ -1035,7 +1038,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 $num += 1;
             }
             self::assertEquals(1, $num);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testEntityWithParent()
@@ -1061,7 +1064,8 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
             function () use ($datastore, $testNamespace) {
                 $namespaces = namespace_run_query($datastore, 'm', 'o');
                 $this->assertEquals([$testNamespace], $namespaces);
-            }
+            },
+            self::$eventuallyConsistentRetryCount
         );
     }
 
@@ -1076,7 +1080,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
         $this->runEventuallyConsistentTest(function () {
             $kinds = kind_run_query(self::$datastore);
             $this->assertEquals(['Account', 'Task'], $kinds);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testPropertyRunQuery()
@@ -1093,7 +1097,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 ['Account.accountType', 'Task.description'],
                 $properties
             );
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testPropertyByKindRunQuery()
@@ -1108,7 +1112,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
             $properties = property_by_kind_run_query(self::$datastore);
             $this->assertArrayHasKey('description', $properties);
             $this->assertEquals(['STRING'], $properties['description']);
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function testPropertyFilteringRunQuery()
@@ -1135,7 +1139,7 @@ class ConceptsTest extends \PHPUnit_Framework_TestCase
                 ['Task.priority', 'Task.tags', 'TaskList.created'],
                 $properties
             );
-        });
+        }, self::$eventuallyConsistentRetryCount);
     }
 
     public function tearDown()
