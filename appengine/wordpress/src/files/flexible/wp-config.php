@@ -30,7 +30,7 @@ stream_wrapper_register(
 define('GOOGLE_CLOUD_STORAGE_BUCKET', '{{project_id}}.appspot.com');
 
 // $onGae is true on production.
-$onGae = filter_var(getenv('GAE_VM'), FILTER_VALIDATE_BOOLEAN);
+$onGae = getenv('GAE_VERSION') !== false || getenv('GAE_VM') !== false;
 
 // Cache settings
 define('WP_CACHE', $onGae);
