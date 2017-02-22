@@ -40,13 +40,14 @@ class WordPressSetup extends Command
     const FLEXIBLE_ENV = 'Flexible Environment';
     const STANDARD_ENV = 'Standard Environment';
 
-    const DEFAULT_DB_REGION = 'us-central1';
+    const DEFAULT_DB_REGION = 'asia-northeast1';
 
     private static $availableDbRegions = array(
         'us-central1',
         'us-east1',
         'europe-west1',
         'asia-east1',
+        'asia-northeast1',
     );
 
     protected function configure()
@@ -327,10 +328,10 @@ class WordPressSetup extends Command
         );
 
         $keys = array(
-            'project_id' => '',
-            'db_instance' => 'wp',
-            'db_name' => 'wp',
-            'db_user' => 'wp',
+            'project_id' => 'appeginner',
+            'db_instance' => 'sql-appeginner',
+            'db_name' => 'wplms',
+            'db_user' => 'wplms',
             'db_password' => '',
         );
         if ($env === self::STANDARD_ENV) {
